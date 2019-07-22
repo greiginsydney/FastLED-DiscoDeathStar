@@ -10,6 +10,8 @@ FASTLED_USING_NAMESPACE
 // https://gist.github.com/StefanPetrick/c856b6d681ec3122e5551403aabfcc68
 // https://bitbucket.org/ratkins/ledeffects/src/default/SinzianaPanel.ino
 
+// ... and with the magic speed fix courtesy of https://www.reddit.com/user/Jem_Spencer
+
 
 #if defined(FASTLED_VERSION) && (FASTLED_VERSION < 3001000)
 #warning "Requires FastLED 3.1 or later; check github for latest code."
@@ -57,21 +59,11 @@ bool corkScrew_toggle = false;
 int worm_x = 0;
 int worm_y = 0;
 
-// Teensy IO pin arrangement:
-#define LED_PIN0  6
-#define LED_PIN1 14
-#define LED_PIN2  7
-#define LED_PIN3  5
-#define LED_PIN4 21
-#define LED_PIN5 20
-#define LED_PIN6  2
-#define LED_PIN7  8
-
 #define COLOR_ORDER GRB
 #define CHIPSET     WS2812
 
 #define BRIGHTNESS 18
-#define FRAMES_PER_SECOND  15
+#define FRAMES_PER_SECOND  120
 
 
 /////////////////////////////////////////////////////////
@@ -116,11 +108,12 @@ CRGBPalette16 palette = palettes[0];
 /////////////////////////////////////////////////////////
 
 // Params for width (columns) and height (LEDs per column)
-const uint16_t kMatrixWidth  = 64;  // Test ball = 16, Death Star = 64
-const uint16_t kMatrixHeight = 45;  // Test ball = 16, Death Star = 45
+const uint16_t kMatrixWidth  = 16;  // Test ball = 16, Death Star = 64
+const uint16_t kMatrixHeight = 16;  // Test ball = 16, Death Star = 45
 
-const uint16_t kColumnsPerIOPin =  8;  // Test ball = 2; Death Star =  8
-const uint16_t kLEDsPerIOPin = kColumnsPerIOPin * kMatrixHeight;
+#define NUM_LEDS_PER_STRIP 32
+#define NUM_STRIPS 8
+
 
 const uint16_t NUM_LEDS (kMatrixWidth * kMatrixHeight);
 
@@ -210,14 +203,7 @@ void setup()
   
   // tell FastLED about the LED strip configuration
   // OLD: FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
-  FastLED.addLeds<CHIPSET, LED_PIN0, COLOR_ORDER>(leds, 0,                  kLEDsPerIOPin).setCorrection(TypicalSMD5050);  
-  FastLED.addLeds<CHIPSET, LED_PIN1, COLOR_ORDER>(leds,     kLEDsPerIOPin,  kLEDsPerIOPin).setCorrection(TypicalSMD5050);
-  FastLED.addLeds<CHIPSET, LED_PIN2, COLOR_ORDER>(leds, 2 * kLEDsPerIOPin,  kLEDsPerIOPin).setCorrection(TypicalSMD5050);
-  FastLED.addLeds<CHIPSET, LED_PIN3, COLOR_ORDER>(leds, 3 * kLEDsPerIOPin,  kLEDsPerIOPin).setCorrection(TypicalSMD5050);
-  FastLED.addLeds<CHIPSET, LED_PIN4, COLOR_ORDER>(leds, 4 * kLEDsPerIOPin,  kLEDsPerIOPin).setCorrection(TypicalSMD5050);
-  FastLED.addLeds<CHIPSET, LED_PIN5, COLOR_ORDER>(leds, 5 * kLEDsPerIOPin,  kLEDsPerIOPin).setCorrection(TypicalSMD5050);
-  FastLED.addLeds<CHIPSET, LED_PIN6, COLOR_ORDER>(leds, 6 * kLEDsPerIOPin,  kLEDsPerIOPin).setCorrection(TypicalSMD5050);
-  FastLED.addLeds<CHIPSET, LED_PIN7, COLOR_ORDER>(leds, 7 * kLEDsPerIOPin,  kLEDsPerIOPin).setCorrection(TypicalSMD5050);
+  FastLED.addLeds<WS2811_PORTD, NUM_STRIPS>(leds, NUM_LEDS_PER_STRIP).setCorrection(TypicalSMD5050);
 
   // set master brightness control
   FastLED.setBrightness(BRIGHTNESS);
@@ -465,7 +451,7 @@ void pattern5()
       leds[ XY( x, y) ] = CHSV( random8(), 255, 255);
     }
     FastLED.show();
-    //FastLED.delay(20);//(1000/FRAMES_PER_SECOND);
+    FastLED.delay(1000/FRAMES_PER_SECOND);
     // This inner loop will EXTINGUISH the row
     for(int x = 0; x < kMatrixWidth; x++)
     {
@@ -482,7 +468,7 @@ void pattern5()
       leds[ XY( x, y) ] = CHSV( random8(), 255, 255);
     }
     FastLED.show();
-    //FastLED.delay(20);//00/FRAMES_PER_SECOND);
+    FastLED.delay(1000/FRAMES_PER_SECOND);
     // This inner loop will EXTINGUISH the row
     for(int x = 0; x < kMatrixWidth; x++)
     {
