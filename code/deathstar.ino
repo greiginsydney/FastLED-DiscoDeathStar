@@ -28,12 +28,12 @@ FASTLED_USING_NAMESPACE
 #define Manual 0;
 #define Random 1;
 #define Sequential 2;
-uint8_t PATTERN_MODE = Manual; // Options: Manual, Random, Sequential
-uint8_t gCurrentPatternNumber = 24;
-// Index number of which pattern is current
+uint8_t PATTERN_MODE = 0; // Options: Manual, Random, Sequential
+uint8_t gCurrentPatternNumber = 24; // Index number of which pattern is currently 'playing'
+uint8_t gStoredPatternNumber =  0;  // Previous value, before the DMX switch was toggled
 
-// 0  = all on, slow pulsing rainbow
-// 1  = same, but with sparkles
+// 0  = All OFF. BLACK / DBO
+// 1  = SPARE
 // 2  = random individual LEDs. No pattern of which to speak.
 // 3  = 'sinelon'. NEEDS WORK
 // 4  = crazy many-led chase pattern ('juggle')
@@ -45,7 +45,6 @@ uint8_t gCurrentPatternNumber = 24;
 // 10 = multi-coloured column (all lit) chases around the ball 
 // 11 = multi-coloured row (all lit) pulses from top to bottom down the ball 
 // 12 = faulty
-// 13 = KILL - test pattern. Static multi-coloured corkscrew (for alignment)
 // 14 = multi-coloured rotating corkscrew
 // 15 = Stefan's noise pattern
 // 16 = plasma - awesome, but a little like 7?
@@ -59,6 +58,11 @@ uint8_t gCurrentPatternNumber = 24;
 // 24 = reverse corkscrew
 // 25 = doSnake
 // 26 = doPacMan
+// 27 = all on, slow pulsing rainbow
+// 28 = same, but with sparkles
+// 29 = spare
+// 30 = spare
+// 31 = spare
 
 int corkScrew_x = 0; //Used for the corkscrew pattern to pass back to itself per pass through loop
 int worm_x = 0; // unused
@@ -73,6 +77,28 @@ int ch9lastX = 0;
 
 #define BRIGHTNESS 96
 #define FRAMES_PER_SECOND  30
+
+
+/////////////////////////////////////////////////////////
+// DMX Mode
+/////////////////////////////////////////////////////////
+
+#define DMXModeSelect   24  //High for DMX mode, Low for Manual (code controlled mode)
+
+#define DMXPattern0     25 //LSB 
+#define DMXPattern1     26 //
+#define DMXPattern2     27 //
+#define DMXPattern3     28 //
+#define DMXPattern4     29 //MSB
+#define DMXSpeed0       30 //LSB
+#define DMXSpeed1       31 //
+#define DMXSpeed2       32 //MSB
+#define DMXBrightness0  33 // 
+#define DMXBrightness1  34 //
+#define DMXBrightness2  35 //
+
+bool lastDmxMode = false; //Stores the last state change of the DMX mode switch
+uint8_t MASTER_BRIGHTNESS = BRIGHTNESS;
 
 
 /////////////////////////////////////////////////////////
@@ -134,7 +160,7 @@ const long PacManSolid[] PROGMEM =
 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 
 };
 
-// Pac-Man - SOLID
+// Pac-Man - Mouth OPEN
 const long PacManMouthOpen[] PROGMEM =
 {
 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 
@@ -161,11 +187,11 @@ const long PacManMouthOpen[] PROGMEM =
 /////////////////////////////////////////////////////////
 
 // Params for width (columns) and height (LEDs per column)
-const uint16_t kMatrixWidth  = 64;  // Test ball = 16, Death Star = 64
-const uint16_t kMatrixHeight = 45;  // Test ball = 16, Death Star = 45
+const uint16_t kMatrixWidth  = 16;  // Test ball = 16, Death Star = 64
+const uint16_t kMatrixHeight = 16;  // Test ball = 16, Death Star = 45
 
-#define NUM_LEDS_PER_STRIP 360
-#define NUM_STRIPS 8
+#define NUM_LEDS_PER_STRIP 32 //360
+#define NUM_STRIPS 8 //8
 
 const uint16_t NUM_LEDS (kMatrixWidth * kMatrixHeight);
 
@@ -247,6 +273,41 @@ void DrawOneFrame( byte startHue8, int8_t yHueDelta8, int8_t xHueDelta8)
 #include "Wave.h"
 #include "Snake.cpp"
 
+
+uint8_t GetDmxPattern()
+{
+  uint8_t NewPattern = 0;
+  if (digitalRead(DMXPattern4)) { NewPattern += 16; }
+  if (digitalRead(DMXPattern3)) { NewPattern +=  8; }
+  if (digitalRead(DMXPattern2)) { NewPattern +=  4; }
+  if (digitalRead(DMXPattern1)) { NewPattern +=  2; }
+  if (digitalRead(DMXPattern0)) { NewPattern +=  1; }
+  Serial.println("DMX pattern is " + String(NewPattern));
+  return NewPattern;
+}
+
+uint8_t DMXBrightnessArray[8] = 
+{
+10,
+40,
+70,
+110,
+140,
+180,
+210,
+255
+};
+
+uint8_t GetDmxBrightness()
+{
+  uint8_t NewBrightness = 0;
+  if (digitalRead(DMXBrightness2)) { NewBrightness +=  4; }
+  if (digitalRead(DMXBrightness1)) { NewBrightness +=  2; }
+  if (digitalRead(DMXBrightness0)) { NewBrightness +=  1; }
+  Serial.println("DMX Brightness is " + String(DMXBrightnessArray[NewBrightness]));
+  return DMXBrightnessArray[NewBrightness];
+}
+
 void setup()
 {
   Serial.begin(9600);
@@ -254,31 +315,60 @@ void setup()
   
   // tell FastLED about the LED strip configuration
   LEDS.addLeds<OCTOWS2811>(leds, NUM_LEDS_PER_STRIP);
+
+  //Setup DMX mode input pins. All use internal pull-down resistors, except pin 24 which is physical
+  pinMode(DMXModeSelect, INPUT);
+  pinMode (DMXPattern0, INPUT_PULLDOWN);
+  pinMode (DMXPattern1, INPUT_PULLDOWN);
+  pinMode (DMXPattern2, INPUT_PULLDOWN);
+  pinMode (DMXPattern3, INPUT_PULLDOWN);
+  pinMode (DMXPattern4, INPUT_PULLDOWN);
+  pinMode (DMXSpeed0, INPUT_PULLDOWN);
+  pinMode (DMXSpeed1, INPUT_PULLDOWN);
+  pinMode (DMXSpeed2, INPUT_PULLDOWN);
+  pinMode (DMXBrightness0, INPUT_PULLDOWN);
+  pinMode (DMXBrightness1, INPUT_PULLDOWN);
+  pinMode (DMXBrightness2, INPUT_PULLDOWN);
+
+  //Set the inital value of the DMX mode switch:
+  if (digitalRead(DMXModeSelect))
+  {
+    lastDmxMode = true;
+    gCurrentPatternNumber = GetDmxPattern();
+    MASTER_BRIGHTNESS = GetDmxBrightness();
+  }
+  else
+  {
+    lastDmxMode = false;
+    gStoredPatternNumber = gCurrentPatternNumber;
+    MASTER_BRIGHTNESS = BRIGHTNESS;
+  }
+
   // set master brightness control
-  LEDS.setBrightness(BRIGHTNESS);
+  LEDS.setBrightness(MASTER_BRIGHTNESS);
 }
 
 uint16_t gCurrentPatternDelay;
 
 // List of patterns to cycle through.  Each is defined as a separate function below.
 typedef void (*SimplePatternList[])();
-SimplePatternList gPatterns = { rainbow, rainbowWithGlitter, confetti, sinelon, 
+SimplePatternList gPatterns = { black, spare1, confetti, sinelon, 
     juggle, bpm, pattern0, pattern1, pattern2, pattern3, pattern4, pattern5, 
     pattern6, pattern7, pattern8, noise_noise1, plasma, applause, huecycle,
     pride, fire2012WithPalette, wave, matrixEffect, trailingCorkscrew, reverseCorkscrew,
-    doSnake, doPacMan};
+    doSnake, doPacMan, rainbow, rainbowWithGlitter, spare29, spare30, spare31};
 
 uint16_t PatternDelay[ARRAY_SIZE(gPatterns)] =
 {
-40, // 0  = all on, slow pulsing rainbow
-40, // 1  = same, but with sparkles
+40, // 0  = BLACK - DBO
+40, // 1  = SPARE1
 40, // 2  = random individual LEDs. No pattern of which to speak.
 40, // 3  = 'sinelon'. NEEDS WORK
 40, // 4  = crazy many-led chase pattern ('juggle')
 40, // 5  = coloured vertical bars chase around the ball. might be ok?
 20, // 6  = TEST - my basic snake
 20, // 7  = AWESOME colour wave. (original xy demo pattern)
-20, // 8  = Spare
+20, // 8  = a single vertical column of RED leds chases around the ball
 30, // 9  = Single led sweeps down from the top and back up the other side, then +1 x and continues
 40, // 10 = multi-coloured column (all lit) chases around the ball 
 40, // 11 = multi-coloured row (all lit) pulses from top to bottom down the ball 
@@ -296,13 +386,20 @@ uint16_t PatternDelay[ARRAY_SIZE(gPatterns)] =
 60, // 23 = my corkscrew, with trailing bits
 60, // 24 = reverse corkscrew
 2, // 25 = doSnake
-30 // 26 = doPacMan
+30, // 26 = doPacMan
+40, // 27  = rainbow
+40, // 28 = rainbowWithGlitter
+20, // 29 = spare
+20, // 30 = spare
+20  // 31 = spare
 };
 
 uint8_t gHue = 0; // rotating "base color" used by many of the patterns
   
 void loop()
 {
+  bool nowDmxMode;
+  
   // Call the current pattern function once, updating the 'leds' array
   gPatterns[gCurrentPatternNumber]();
 
@@ -314,6 +411,35 @@ void loop()
   // do some periodic updates
   EVERY_N_MILLISECONDS( 20 ) { gHue++; } // slowly cycle the "base color" through the rainbow
 
+  // Check the DMX mode and settings:
+  EVERY_N_MILLISECONDS( 20 )
+  {
+    nowDmxMode = digitalRead(DMXModeSelect);
+    if (nowDmxMode != lastDmxMode)
+    {
+      lastDmxMode = nowDmxMode;
+      if (nowDmxMode)
+      {
+        Serial.println("Yes, now in DMX mode.");
+        gStoredPatternNumber = gCurrentPatternNumber; //Save the last pattern we were showing
+      }
+      else
+      {
+        Serial.println("Dropped out of DMX mode.");
+        gCurrentPatternNumber = gStoredPatternNumber; //Reinstate the old stored pattern
+        MASTER_BRIGHTNESS = BRIGHTNESS; //Reinstate the hard-coded default
+        LEDS.setBrightness(MASTER_BRIGHTNESS);
+      }
+    }
+    if (nowDmxMode)
+    {
+      gCurrentPatternNumber = GetDmxPattern();
+      MASTER_BRIGHTNESS = GetDmxBrightness();
+      LEDS.setBrightness(MASTER_BRIGHTNESS);
+    }
+  }
+
+
   // https://github.com/marmilicious/FastLED_examples/blob/master/every_n_timer_variable.ino
   // change patterns periodically - based on the chosen pattern:
   EVERY_N_SECONDS_I( timingObj, 20)
@@ -324,56 +450,53 @@ void loop()
     nextPattern();
     timingObj.setPeriod( random8(15,PatternDelay[gCurrentPatternNumber]) );
   }
-  
-  //EVERY_N_SECONDS( 10 ) { nextPattern(); } // change patterns periodically
 }
 
 #define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
 
 void nextPattern()
 {
-  switch (PATTERN_MODE)
+  if (digitalRead(DMXModeSelect))
   {
-    case 0 :
-      // Manual. Do nothing, the pattern number will not change.
-      return;
-      break;
-    case 1 :
-      // Random. Choose another pattern at random - possibly even the one that's currently running    
-        gCurrentPatternNumber = random8(ARRAY_SIZE(gPatterns)-1);
-      break;
-    case 2 :
-      // Sequential.
-      gCurrentPatternNumber = (gCurrentPatternNumber + 1) % ARRAY_SIZE(gPatterns);
-      break;
+    // We're in DMX mode. Do nothing here.
   }
-  Serial.println("Next pattern is " + String(gCurrentPatternNumber));
+  else
+  {
+    switch (PATTERN_MODE)
+    {
+      case 0 :
+        // Manual. Do nothing, the pattern number will not change.
+        return;
+        break;
+      case 1 :
+        // Random. Choose another pattern at random - possibly even the one that's currently running    
+          gCurrentPatternNumber = random8(ARRAY_SIZE(gPatterns)-1);
+        break;
+      case 2 :
+        // Sequential.
+        gCurrentPatternNumber = (gCurrentPatternNumber + 1) % ARRAY_SIZE(gPatterns);
+        break;        
+    }
+    Serial.println("Next pattern is " + String(gCurrentPatternNumber));
+  }
 }
 
 // 0
-void rainbow() 
+void black() 
 {
-  // FastLED's built-in rainbow generator
-  fill_rainbow( leds, NUM_LEDS, gHue, 7);
+  // This pattern is only an option when in Manual or DMX Modes:
+  if ((PATTERN_MODE != 0) || (lastDmxMode == false)) { nextPattern(); return; }
+  
+  // Turn the ball off!
+  fill_solid( leds, NUM_LEDS, CRGB::Black);
   LEDS.delay(1000/FRAMES_PER_SECOND); 
 }
 
 // 1
-void rainbowWithGlitter() 
+void spare1() 
 {
-  // built-in FastLED rainbow, plus some random sparkly glitter
-  rainbow();
-  addGlitter(200);
+  if (PATTERN_MODE != 0) { nextPattern(); return; }
 }
-
-void addGlitter( fract8 chanceOfGlitter) 
-{
-  if( random8() < chanceOfGlitter)
-  {
-    leds[ random16(NUM_LEDS) ] += CRGB::White;
-  }
-}
-
 
 // 2
 void confetti() 
@@ -471,11 +594,11 @@ void pattern1()
   DrawOneFrame( ms / 65536, yHueDelta32 / 32768, xHueDelta32 / 32768);
   if( ms < 5000 )
   {
-    LEDS.setBrightness( scale8( BRIGHTNESS, (ms * 256) / 5000));
+    LEDS.setBrightness( scale8( MASTER_BRIGHTNESS, (ms * 256) / 5000));
   }
   else
   {
-    LEDS.setBrightness(BRIGHTNESS);
+    LEDS.setBrightness(MASTER_BRIGHTNESS);
   }
   LEDS.show();
   LEDS.delay(1000/FRAMES_PER_SECOND); 
@@ -509,7 +632,7 @@ void pattern3()
   int yy;
   int zz;
   int zz2;
-  LEDS.setBrightness(120);
+  LEDS.setBrightness(MASTER_BRIGHTNESS);
   // A coloured led runs top to bottom, crosses over and back up the other side.
   // A different coloured led runs at 45 degrees, 180 degrees out of phase
   
@@ -590,7 +713,7 @@ void pattern3()
     //LEDS.delay(1000/FRAMES_PER_SECOND);
   }
   LEDS.show(); // Turn off the last LED
-  LEDS.setBrightness(BRIGHTNESS);
+  LEDS.setBrightness(MASTER_BRIGHTNESS);
   ch9lastX = x; // ... and pass back to the main loop.
 }
 
@@ -1173,5 +1296,48 @@ void doPacMan()
     {
       corkScrew_x = kMatrixWidth -1;
     }
-    
+}
+
+//27
+void rainbow()
+{
+  // FastLED's built-in rainbow generator
+  fill_rainbow( leds, NUM_LEDS, gHue, 7);
+  LEDS.delay(1000/FRAMES_PER_SECOND);  
+}
+
+
+// 28
+void rainbowWithGlitter() 
+{
+  // built-in FastLED rainbow, plus some random sparkly glitter
+  rainbow();
+  addGlitter(200);
+}
+
+
+void addGlitter( fract8 chanceOfGlitter) 
+{
+  if( random8() < chanceOfGlitter)
+  {
+    leds[ random16(NUM_LEDS) ] += CRGB::White;
+  }
+}
+
+//29
+void spare29()
+{
+  if (PATTERN_MODE != 0) { nextPattern(); return; }
+}
+
+//30
+void spare30()
+{
+  if (PATTERN_MODE != 0) { nextPattern(); return; }
+}
+
+//31
+void spare31()
+{
+  if (PATTERN_MODE != 0) { nextPattern(); return; }
 }
