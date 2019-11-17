@@ -24,12 +24,13 @@ FASTLED_USING_NAMESPACE
 
 /////////////////////////////////////////////////////////
 // Pattern management / mode
+// Note these values are overridden by the DMX mode switch
 /////////////////////////////////////////////////////////
 #define Manual 0;
 #define Random 1;
 #define Sequential 2;
 uint8_t PATTERN_MODE = 0; // Options: Manual, Random, Sequential
-uint8_t gCurrentPatternNumber = 24; // Index number of which pattern is currently 'playing'
+uint8_t gCurrentPatternNumber = 30; // Index number of which pattern is currently 'playing'
 uint8_t gStoredPatternNumber =  0;  // Previous value, before the DMX switch was toggled
 
 // 0  = All OFF. BLACK / DBO
@@ -37,27 +38,28 @@ uint8_t gStoredPatternNumber =  0;  // Previous value, before the DMX switch was
 // 2  = random individual LEDs. No pattern of which to speak.
 // 3  = 'sinelon'. NEEDS WORK
 // 4  = crazy many-led chase pattern ('juggle')
-// 5  = coloured vertical bars chase around the ball. might be ok?
+// 5  = coloured vertical bars chase around the ball
 // 6  = TEST - my basic snake
 // 7  = AWESOME colour wave. (original xy demo pattern)
 // 8  = Spare
-// 9  = Single led sweeps down from the top and back up the other side, then +1 x and continues
+// 9  = crossoverChase. A single led sweeps down from the top and back up the other side, then +1 x and continues
 // 10 = multi-coloured column (all lit) chases around the ball 
-// 11 = multi-coloured row (all lit) pulses from top to bottom down the ball 
+// 11 = horizontal bounce. multi-coloured row (all lit) pulses from top to bottom down the ball 
 // 12 = faulty
-// 14 = multi-coloured rotating corkscrew
-// 15 = Stefan's noise pattern
-// 16 = plasma - awesome, but a little like 7?
-// 17 = 'applause' - sparse, purply sparkles
-// 18 = huecycle - the whole ball is the SAME colour, changing through the rainbow
-// 19 = 'pride'
-// 20 = fire2012WithPalette - OK
-// 21 = wave - GREAT
-// 22 = matrixEffect.ino - kinda coloured snowfall
+// 13 = Stefan's noise pattern
+// 14 = plasma - awesome, but a little like 7?
+// 15 = 'applause' - sparse, purply sparkles
+// 16 = huecycle - the whole ball is the SAME colour, changing through the rainbow
+// 17 = 'pride'
+// 18 = fire2012WithPalette
+// 19 = wave
+// 20 = matrixEffect.ino - kinda coloured snowfall
+// 21 = test pattern. Static corkscrew
+// 22 = simple rotating corkscrew
 // 23 = my corkscrew, with trailing bits
-// 24 = reverse corkscrew
+// 24 = reverse trailing corkscrew
 // 25 = doSnake
-// 26 = doPacMan
+// 26 = Pac-Man
 // 27 = all on, slow pulsing rainbow
 // 28 = same, but with sparkles
 // 29 = spare
@@ -139,59 +141,16 @@ int currentPaletteIndex = 0;
 CRGBPalette16 palette = palettes[0];
 
 
-// Pac-Man - SOLID
-const long PacManSolid[] PROGMEM =
-{
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 
-0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 
-0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 
-0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 
-0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 
-};
-
-// Pac-Man - Mouth OPEN
-const long PacManMouthOpen[] PROGMEM =
-{
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 
-0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFFFF00, 0xFFFF00, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 
-};
-
-
 /////////////////////////////////////////////////////////
 // Setup the ball for XY/array operation
 /////////////////////////////////////////////////////////
 
 // Params for width (columns) and height (LEDs per column)
-const uint16_t kMatrixWidth  = 16;  // Test ball = 16, Death Star = 64
-const uint16_t kMatrixHeight = 16;  // Test ball = 16, Death Star = 45
+const uint16_t kMatrixWidth  = 64;  // Test ball = 16, Death Star = 64
+const uint16_t kMatrixHeight = 45;  // Test ball = 16, Death Star = 45
 
-#define NUM_LEDS_PER_STRIP 32 //360
-#define NUM_STRIPS 8 //8
+#define NUM_LEDS_PER_STRIP 360 // Test ball = 32, Death Star = 360
+#define NUM_STRIPS 8           // 8
 
 const uint16_t NUM_LEDS (kMatrixWidth * kMatrixHeight);
 
@@ -272,6 +231,8 @@ void DrawOneFrame( byte startHue8, int8_t yHueDelta8, int8_t xHueDelta8)
 #include "Fire2012WithPalette.h"
 #include "Wave.h"
 #include "Snake.cpp"
+#include "Pac-Man.h"
+#include "Corkscrews.h"
 
 
 uint8_t GetDmxPattern()
@@ -353,10 +314,10 @@ uint16_t gCurrentPatternDelay;
 // List of patterns to cycle through.  Each is defined as a separate function below.
 typedef void (*SimplePatternList[])();
 SimplePatternList gPatterns = { black, spare1, confetti, sinelon, 
-    juggle, bpm, pattern0, pattern1, pattern2, pattern3, pattern4, pattern5, 
-    pattern6, pattern7, pattern8, noise_noise1, plasma, applause, huecycle,
-    pride, fire2012WithPalette, wave, matrixEffect, trailingCorkscrew, reverseCorkscrew,
-    doSnake, doPacMan, rainbow, rainbowWithGlitter, spare29, spare30, spare31};
+    juggle, bpm, basicSnake, xyDemo, crossoverChase, pattern3, pattern4, horizontalBounce, 
+    pattern6, noise_noise1, plasma, applause, huecycle, pride, fire2012WithPalette, 
+    wave, matrixEffect, testPattern, simpleCorkscrew, trailingCorkscrew, reverseTrailingCorkscrew,
+    doSnake, PacMan, rainbow, rainbowWithGlitter, spare29, spare30, spare31};
 
 uint16_t PatternDelay[ARRAY_SIZE(gPatterns)] =
 {
@@ -373,20 +334,20 @@ uint16_t PatternDelay[ARRAY_SIZE(gPatterns)] =
 40, // 10 = multi-coloured column (all lit) chases around the ball 
 40, // 11 = multi-coloured row (all lit) pulses from top to bottom down the ball 
 20, // 12 = faulty
-20, // 13 = KILL - test pattern. Static multi-coloured corkscrew (for alignment)
-30, // 14 = multi-coloured rotating corkscrew
-90, // 15 = Stefan's noise pattern
-20, // 16 = plasma - awesome, but a little like 7?
-90, // 17 = 'applause' - sparse, purply sparkles
-90, // 18 = huecycle - the whole ball is the SAME colour, changing through the rainbow
-300, // 19 = 'pride'
-120, // 20 = fire2012WithPalette - OK
-60, // 21 = wave - GREAT
-300, // 22 = matrixEffect.ino - kinda coloured snowfall
+90, // 13 = Stefan's noise pattern
+20, // 14 = plasma - awesome, but a little like 7?
+90, // 15 = 'applause' - sparse, purply sparkles
+90, // 16 = huecycle - the whole ball is the SAME colour, changing through the rainbow
+300,// 17 = 'pride'
+120,// 18 = fire2012WithPalette - OK
+60, // 19 = wave - GREAT
+300,// 20 = matrixEffect.ino - kinda coloured snowfall
+20, // 21 = Test pattern. Static multi-coloured corkscrew (for IO pin rotation/alignment)
+30, // 22 = multi-coloured rotating corkscrew
 60, // 23 = my corkscrew, with trailing bits
 60, // 24 = reverse corkscrew
-2, // 25 = doSnake
-30, // 26 = doPacMan
+2,  // 25 = doSnake
+30, // 26 = Pac-Man
 40, // 27  = rainbow
 40, // 28 = rainbowWithGlitter
 20, // 29 = spare
@@ -546,7 +507,7 @@ void bpm()
 }
 
 // 6
-void pattern0()
+void basicSnake()
 {
   if (PATTERN_MODE != 0) { nextPattern(); return; }
 
@@ -582,7 +543,7 @@ void pattern0()
 }   
  
 // 7
-void pattern1()
+void xyDemo()
 {
   if (PATTERN_MODE != 0) { nextPattern(); return; }
   //SKIPPING: I can't dial the brightness down enough.
@@ -605,7 +566,7 @@ void pattern1()
 }
 
 // 8
-void pattern2()
+void crossoverChase()
 {
   if (PATTERN_MODE != 0) { nextPattern(); return; }
   
@@ -787,8 +748,9 @@ void pattern4()
   }
 }
 
+
 // 11
-void pattern5()
+void horizontalBounce()
 {
   // Runs a horizontal row 'ring' down the ball and back again
   // This outer loop will go over each vertical *row*
@@ -837,6 +799,7 @@ void pattern5()
   }
 }
 
+
 // 12
 void pattern6()
 {
@@ -858,81 +821,10 @@ void pattern6()
   LEDS.delay(1000/FRAMES_PER_SECOND);
 }
 
-// 13
-void pattern7()
-{
-  if (PATTERN_MODE != 0) { nextPattern(); return; }
-  
-  //A static corkscrew around the pole. Confirms column rotation is correct
-  //turn everything OFF:
-  // This outer loop will go over each column
-  for (uint8_t x = 0; x < kMatrixWidth; x++) 
-  {
-    // This inner loop will go over each row
-    for (uint8_t y = 0; y < kMatrixHeight; y++)
-    {
-      if (x == y)
-      {
-        leds[ XY( x, y) ] = CRGB::Cyan;//CHSV( random8(), 255, 255);
-      }
-      else
-      {
-        leds[ XY( x, y)] = CRGB::Black;
-      }
-    }
-  }
-  LEDS.show();
-  LEDS.delay(10000/FRAMES_PER_SECOND);
-}
-
-// 14
-void pattern8()
-{
-  if (PATTERN_MODE != 0) { nextPattern(); return; }
-  
-  //ROTATE the Corkscrew around the pole.
-  int bx = 0;
-  int by = 0;
-  bx += corkScrew_x;
-  if (bx >= kMatrixWidth) {bx = 0;}
-  int StopAt = 0; //Initalise
-  // This loop turns the LEDs on:
-  do 
-  {
-    leds[ XY( bx, by) ] = CHSV( random8(), 255, 255);
-    bx++;
-    by++;
-    if (by >= kMatrixHeight){ StopAt++;}
-    if (bx >= kMatrixWidth) {bx = 0;}
-    if (by >= kMatrixHeight){by = 0;}
-    if (StopAt >= 1) {break ;}
-  } while (true);
-  LEDS.show();
-  LEDS.delay(1000/FRAMES_PER_SECOND);
-  // While this one turns them off:
-  bx = corkScrew_x;
-  if (bx >= kMatrixWidth) {bx = 0;}
-  StopAt = 0; //Reinitalise
-  do 
-  {
-    leds[ XY( bx, by) ] = CRGB::Black;
-    bx++;
-    by++;
-    if (by >= kMatrixHeight){ StopAt++;}
-    if (bx >= kMatrixWidth) {bx = 0;}
-    if (by >= kMatrixHeight){by = 0;}
-    if (StopAt >= 1) {break ;}
-  } while (true);
-  corkScrew_x++;
-  if (corkScrew_x >= kMatrixWidth)
-  {
-    corkScrew_x = 0;
-  }
-}
 
 //as shown on youtube
 //a noise controlled & modulated by itself
-// 15
+// 13
 void noise_noise1()
 {
   CRGBPalette16 Pal( pit );
@@ -991,7 +883,8 @@ void noise_noise1()
   LEDS.delay(1000/FRAMES_PER_SECOND); 
 }
 
-// 16 - https://forum.arduino.cc/index.php?topic=600200.0
+
+// 14 - https://forum.arduino.cc/index.php?topic=600200.0
 void plasma() 
 {
   static byte offset  = 0; // counter for radial color wave motion
@@ -1015,7 +908,8 @@ void plasma()
   LEDS.delay(1000/FRAMES_PER_SECOND); 
 }
 
-// 17 https://github.com/evilgeniuslabs/torch/blob/master/torch.ino
+
+// 15 https://github.com/evilgeniuslabs/torch/blob/master/torch.ino
 void applause()
 {
   static uint16_t lastPixel = 0;
@@ -1026,18 +920,20 @@ void applause()
   return ;
 }
 
-// 18 https://github.com/evilgeniuslabs/torch/blob/master/torch.ino
+
+// 16 https://github.com/evilgeniuslabs/torch/blob/master/torch.ino
 void huecycle()
 {
   fill_solid(leds, NUM_LEDS, CHSV(gHue, 255, 255));
   LEDS.delay(1000/FRAMES_PER_SECOND); 
 }
 
+
 // Pride2015 by Mark Kriegsman
 // https://gist.github.com/kriegsman/964de772d64c502760e5
 // This function draws rainbows with an ever-changing,
 // widely-varying set of parameters.
-// 19 
+// 17 
 void pride()
 {
   static uint16_t sPseudotime = 0;
@@ -1081,10 +977,12 @@ void pride()
   return ;
 }
 
-//20 - fire (.h file)
-//21 - wave (.h file)
 
-// 22 - https://gist.github.com/gnkarn/908383d5b81444362bc2e5421566fdd1
+// 18 - fire (.h file)
+// 19 - wave (.h file)
+
+                                      
+// 20 - https://gist.github.com/gnkarn/908383d5b81444362bc2e5421566fdd1
 void matrixEffect()
 {
   EVERY_N_MILLIS(75) // falling speed
@@ -1127,112 +1025,11 @@ void matrixEffect()
   LEDS.show();
 }
 
-// 23 - my trailing corkscrew
-void trailingCorkscrew()
-{
-  
-  //if (PATTERN_MODE != 0) { nextPattern(); return; } //Skip this pattern if mode is not Manual
-  
-  int bx = 0;
-  int by = 0;
-  bx += corkScrew_x;
-  if (bx >= kMatrixWidth) {bx = 0;}
-  int StopAt = 0; //Initalise
-  Serial.println("entering ON loop");
-  // This loop turns the LEDs on:
-  do 
-  {
-    leds[ XY( bx, by) ] = CHSV( random8(), 255, 255);
-    bx++;
-    by++;
-    if (by >= kMatrixHeight){ StopAt++;}
-    if (bx >= kMatrixWidth) {bx = 0;}
-    if (by >= kMatrixHeight){by = 0;}
-    if (StopAt >= 1) {break ;}
-  } while (true);
-  Serial.println("exited ON loop");
-  LEDS.show();
-  LEDS.delay(1000/FRAMES_PER_SECOND);
-  // While this one turns them off:
-  StopAt = 0; //Reinitalise
-  Serial.println("entering OFF loop");
-  do 
-  {
-    leds[ XY( bx, by) ] = CRGB::Black;
-    bx++;
-    by++;
-    if (by >= kMatrixHeight){ StopAt++;}
-    if (bx >= kMatrixWidth) {bx = 0;}
-    if (by >= kMatrixHeight){by = 0;}
-    if (StopAt >= 1) {break ;}
-  } while (true);
-  Serial.println("exited OFF loop");
-  corkScrew_x++;
-  if (corkScrew_x >= kMatrixWidth)
-  {
-    corkScrew_x = 0;
-  }
-}
+// 21 - test pattern: static corkscrew
+// 22 - simple corkscrew
+// 23 - my trailing corkscrew: trailingCorkscrew()
+// 24 - my trailing corkscrew, backwards: reverseCorkscrew()
 
-// 24 - my trailing corkscrew, backwards
-void reverseCorkscrew()
-{
-  //if (PATTERN_MODE != 0) { nextPattern(); return; }
-  
-  int x = kMatrixWidth -1;
-  int y = 0;
-  x -= corkScrew_x;
-  if (x < 0 ) {x = kMatrixWidth -1;}
-  int StopAt = 0; //Initalise
-  // This loop turns the LEDs on:
-  Serial.println("24: entering ON loop");
-  do 
-  {
-    leds[ XY( x, y) ] = CHSV( random8(), 255, 255);
-    x--;
-    y++;
-    if (x < 0)
-    {
-      x = kMatrixWidth -1;
-    //  StopAt++;
-    }
-    if (y >= kMatrixHeight)
-    {
-      y = 0;
-      StopAt++;
-    }
-    if (StopAt >= 1) {break ;}
-  } while (true);
-  Serial.println("24: exited ON loop");
-  LEDS.show();
-  LEDS.delay(1000/FRAMES_PER_SECOND);
-  // While this one turns them off:
-  StopAt = 0; //Reinitalise
-  Serial.println("24: entering OFF loop");
-  do 
-  {
-    leds[ XY( x, y) ] = CRGB::Black;
-    x--;
-    y++;
-    if (x < 0)
-    {
-      x = kMatrixWidth -1;
-      //StopAt++;
-    }
-    if (y >= kMatrixHeight)
-    {
-      y = 0;
-      StopAt++;
-    }
-    if (StopAt >= 1) {break ;}
-  } while (true);
-  Serial.println("24: exited OFF loop");
-  corkScrew_x--;
-  if (corkScrew_x < 0)
-  {
-    corkScrew_x = kMatrixWidth -1;
-  }
-}
 
 // 25 https://bitbucket.org/ratkins/ledeffects/src/default/
 void doSnake()
@@ -1242,61 +1039,9 @@ void doSnake()
     snake.start();
 }
 
-// 26
-// Thank you Yvan! https://Brainy-Bits.com
-// https://www.youtube.com/watch?v=jkg7T7jlIzU
-// https://www.brainy-bits.com/create-arduino-array-from-pictures/
-// https://www.brainy-bits.com/arduino-16x16-matrix-frame/
-void doPacMan()
-{
-    //if (PATTERN_MODE != 0) { nextPattern(); return; }
-    //turn everything off:
-    //fill_solid(leds, NUM_LEDS, CRGB::Black);
-    //LEDS.show();
-    //LEDS.delay(1000/FRAMES_PER_SECOND);
-    int x = 0;
-    int y = (kMatrixHeight / 2) - 8; //This is our starting position. Our 16x16 char starts 8 chars above the middle
-    int z = 0;
-    bool mouthOpen = false;
-    x += corkScrew_x;
-    if (x >= kMatrixWidth) {x = 0;}
 
-    if (x % 4 >= 2)
-    {
-      mouthOpen = true;
-    }
-    else
-    {
-      mouthOpen= false;
-    }
-   
-    for(int ay = 0; ay < 16; ay++)
-    {
-      for(int ax = 0; ax < 16; ax++)
-      {
-        z = (x+ax);
-        if (z >= kMatrixWidth) {z -= kMatrixWidth;} // Wrap around the "join" of the ball
-        if (z < 0 ) {z += kMatrixWidth - 1;} // Wrap around the "join" of the ball
-        if (mouthOpen)
-        {
-          leds[ XY (z, (y+ay)) ] = pgm_read_dword(&(PacManMouthOpen[((ay*16)+ax)]));  // Read array from Flash
-        }
-        else
-        {
-          leds[ XY (z, (y+ay)) ] = pgm_read_dword(&(PacManSolid[((ay*16)+ax)]));  // Read array from Flash
-        }
-      }
-    }
-    LEDS.show();
-    LEDS.delay(400/FRAMES_PER_SECOND);
-    //corkScrew_x++;
-    //if (corkScrew_x >= kMatrixWidth) {corkScrew_x = 0;}
-    corkScrew_x--;
-    if (corkScrew_x < 0)
-    {
-      corkScrew_x = kMatrixWidth -1;
-    }
-}
+//26 - Pac-Man (.h file)
+
 
 //27
 void rainbow()
@@ -1324,11 +1069,13 @@ void addGlitter( fract8 chanceOfGlitter)
   }
 }
 
+
 //29
 void spare29()
 {
   if (PATTERN_MODE != 0) { nextPattern(); return; }
 }
+
 
 //30
 void spare30()
@@ -1336,8 +1083,10 @@ void spare30()
   if (PATTERN_MODE != 0) { nextPattern(); return; }
 }
 
+
 //31
 void spare31()
 {
   if (PATTERN_MODE != 0) { nextPattern(); return; }
 }
+
