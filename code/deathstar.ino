@@ -30,7 +30,8 @@ FASTLED_USING_NAMESPACE
 #define Random 1;
 #define Sequential 2;
 uint8_t PATTERN_MODE = 0; // Options: Manual, Random, Sequential
-uint8_t gCurrentPatternNumber = 30; // Index number of which pattern is currently 'playing'
+uint8_t gCurrentPatternNumber = 6; // Index number of which pattern is currently 'playing'
+uint8_t gNextPatternNumber = 6;     // If Next != Current, run black() to extinguish all the LEDs
 uint8_t gStoredPatternNumber =  0;  // Previous value, before the DMX switch was toggled
 
 // 0  = All OFF. BLACK / DBO
@@ -39,7 +40,7 @@ uint8_t gStoredPatternNumber =  0;  // Previous value, before the DMX switch was
 // 3  = 'sinelon'. NEEDS WORK
 // 4  = crazy many-led chase pattern ('juggle')
 // 5  = coloured vertical bars chase around the ball
-// 6  = TEST - my basic snake
+// 6  = lighthouse
 // 7  = AWESOME colour wave. (original xy demo pattern)
 // 8  = Spare
 // 9  = crossoverChase. A single led sweeps down from the top and back up the other side, then +1 x and continues
@@ -72,12 +73,12 @@ int worm_y = 0; // unused
 
 CHSV ch9Colour1 = CHSV( random8(), 255, 255);
 CHSV ch9Colour2 = CHSV( random8(), 255, 255);
-int ch9lastX = 0;
+int patternLastX = 0;
 
 #define COLOR_ORDER GRB
 #define CHIPSET     WS2812B
 
-#define BRIGHTNESS 96
+#define BRIGHTNESS 5
 #define FRAMES_PER_SECOND  30
 
 
@@ -101,7 +102,7 @@ int ch9lastX = 0;
 
 bool lastDmxMode = false; //Stores the last state change of the DMX mode switch
 uint8_t MASTER_BRIGHTNESS = BRIGHTNESS;
-
+bool nowDmxMode;
 
 /////////////////////////////////////////////////////////
 // Colour code, from Jason's "torch"
@@ -297,12 +298,14 @@ void setup()
     lastDmxMode = true;
     gCurrentPatternNumber = GetDmxPattern();
     MASTER_BRIGHTNESS = GetDmxBrightness();
+    Serial.println("DMX mode selected on boot");
   }
   else
   {
     lastDmxMode = false;
     gStoredPatternNumber = gCurrentPatternNumber;
     MASTER_BRIGHTNESS = BRIGHTNESS;
+    Serial.println("DMX mode NOT selected on boot");
   }
 
   // set master brightness control
@@ -314,7 +317,7 @@ uint16_t gCurrentPatternDelay;
 // List of patterns to cycle through.  Each is defined as a separate function below.
 typedef void (*SimplePatternList[])();
 SimplePatternList gPatterns = { black, spare1, confetti, sinelon, 
-    juggle, bpm, basicSnake, xyDemo, crossoverChase, pattern3, pattern4, horizontalBounce, 
+    juggle, bpm, lighthouse, xyDemo, crossoverChase, pattern3, pattern4, horizontalBounce, 
     pattern6, noise_noise1, plasma, applause, huecycle, pride, fire2012WithPalette, 
     wave, matrixEffect, testPattern, simpleCorkscrew, trailingCorkscrew, reverseTrailingCorkscrew,
     doSnake, PacMan, rainbow, rainbowWithGlitter, spare29, spare30, spare31};
@@ -327,7 +330,7 @@ uint16_t PatternDelay[ARRAY_SIZE(gPatterns)] =
 40, // 3  = 'sinelon'. NEEDS WORK
 40, // 4  = crazy many-led chase pattern ('juggle')
 40, // 5  = coloured vertical bars chase around the ball. might be ok?
-20, // 6  = TEST - my basic snake
+20, // 6  = lighthouse
 20, // 7  = AWESOME colour wave. (original xy demo pattern)
 20, // 8  = a single vertical column of RED leds chases around the ball
 30, // 9  = Single led sweeps down from the top and back up the other side, then +1 x and continues
@@ -359,8 +362,13 @@ uint8_t gHue = 0; // rotating "base color" used by many of the patterns
   
 void loop()
 {
-  bool nowDmxMode;
-  
+  //If we're changing patterns this loop, extinguish all LEDs first:
+  if (gCurrentPatternNumber != gNextPatternNumber)
+  {
+    DBO();
+    gCurrentPatternNumber = gNextPatternNumber;
+    patternLastX = 0; //Reset this variable, shared by several patterns
+  }
   // Call the current pattern function once, updating the 'leds' array
   gPatterns[gCurrentPatternNumber]();
 
@@ -378,6 +386,7 @@ void loop()
     nowDmxMode = digitalRead(DMXModeSelect);
     if (nowDmxMode != lastDmxMode)
     {
+      DBO(); //Black the ball when-ever the switch changes
       lastDmxMode = nowDmxMode;
       if (nowDmxMode)
       {
@@ -394,12 +403,11 @@ void loop()
     }
     if (nowDmxMode)
     {
-      gCurrentPatternNumber = GetDmxPattern();
+      gNextPatternNumber = GetDmxPattern();
       MASTER_BRIGHTNESS = GetDmxBrightness();
       LEDS.setBrightness(MASTER_BRIGHTNESS);
     }
   }
-
 
   // https://github.com/marmilicious/FastLED_examples/blob/master/every_n_timer_variable.ino
   // change patterns periodically - based on the chosen pattern:
@@ -409,7 +417,7 @@ void loop()
     // period to a new random number of seconds from 10 and 30 seconds.
     // You can name "timingObj" whatever you want.
     nextPattern();
-    timingObj.setPeriod( random8(15,PatternDelay[gCurrentPatternNumber]) );
+    timingObj.setPeriod( random8(15,PatternDelay[gNextPatternNumber]) );
   }
 }
 
@@ -431,15 +439,22 @@ void nextPattern()
         break;
       case 1 :
         // Random. Choose another pattern at random - possibly even the one that's currently running    
-          gCurrentPatternNumber = random8(ARRAY_SIZE(gPatterns)-1);
+          gNextPatternNumber = random8(ARRAY_SIZE(gPatterns)-1);
         break;
       case 2 :
         // Sequential.
-        gCurrentPatternNumber = (gCurrentPatternNumber + 1) % ARRAY_SIZE(gPatterns);
+        gNextPatternNumber = (gCurrentPatternNumber + 1) % ARRAY_SIZE(gPatterns);
         break;        
     }
-    Serial.println("Next pattern is " + String(gCurrentPatternNumber));
+    Serial.println("Next pattern is " + String(gNextPatternNumber));
   }
+}
+
+void DBO() 
+{
+  // This pattern is called to ensure all LEDs are extingushed between changes of pattern
+  fill_solid( leds, NUM_LEDS, CRGB::Black);
+  Serial.println("DBO");
 }
 
 // 0
@@ -450,7 +465,6 @@ void black()
   
   // Turn the ball off!
   fill_solid( leds, NUM_LEDS, CRGB::Black);
-  LEDS.delay(1000/FRAMES_PER_SECOND); 
 }
 
 // 1
@@ -466,7 +480,6 @@ void confetti()
   fadeToBlackBy( leds, NUM_LEDS, 10);
   int pos = random16(NUM_LEDS);
   leds[pos] += CHSV( gHue + random8(64), 200, 255);
-  LEDS.delay(1000/FRAMES_PER_SECOND); 
 }
 
 // 3
@@ -476,7 +489,6 @@ void sinelon()
   fadeToBlackBy( leds, NUM_LEDS, 20);
   int pos = beatsin16( 13, 0, NUM_LEDS - 1 );
   leds[pos] += CHSV( gHue, 255, 192);
-  LEDS.delay(1000/FRAMES_PER_SECOND); 
 }
 
 // 4
@@ -488,8 +500,7 @@ void juggle()
   for( int i = 0; i < 8; i++) {
     leds[beatsin16( i+7, 0, NUM_LEDS-1 )] |= CHSV(dothue, 200, 255);
     dothue += 32;
-  }
-  LEDS.delay(1000/FRAMES_PER_SECOND); 
+  } 
 }
 
 // 5
@@ -503,50 +514,35 @@ void bpm()
   { //9948
     leds[i] = ColorFromPalette(palette, gHue+(i*2), beat-gHue+(i*10));
   }
-  LEDS.delay(1000/FRAMES_PER_SECOND); 
 }
 
 // 6
-void basicSnake()
+void lighthouse()
 {
-  if (PATTERN_MODE != 0) { nextPattern(); return; }
+  int x = patternLastX + 1;
+  if (x >= kMatrixWidth) { x = 0;}
 
-  int x = worm_x;
-  int y = worm_y;
-  int random_change;
-  int random_direction;
-  do
+  int stripes = 2; //How many columns wide is the lighthouse beam?
+  // LEDS.setBrightness(3); Enable this if you're at all concerned your tinkering will result in all of the LEDs lit as white.
+  for (int y = 0; y < kMatrixHeight; y++)
   {
-    x++;
-    if (x > kMatrixWidth) { x = 0;}
-    leds[ XY( x, y) ] = CRGB::Blue;
-    LEDS.show();
-    leds[ XY( x, y) ] = CRGB::Black;
-    random_change = random8(kMatrixWidth);
-    if (x == random_change)
+    leds[ XY( x, y)] = CRGB::White;
+    if (x - stripes >= 0)
     {
-      // Change Y:
-      random_direction = random8(2);
-      if (random_direction == 0)
-      {
-        y--;
-        if (y < 0) { y = 0 ;}
-      }
-      else
-      {
-        y++;
-        if (y >= kMatrixWidth) { y = kMatrixWidth -1;}
-      }
+      leds[ XY( x - stripes, y)] = CRGB::Black;
     }
-    LEDS.delay(1000/FRAMES_PER_SECOND);
-  } while (true);
+    else
+    {
+      leds[ XY( kMatrixWidth - (stripes - x), y)] = CRGB::Black;
+    }
+  }
+  patternLastX = x; // ... and pass back to the main loop.
 }   
  
 // 7
 void xyDemo()
 {
-  if (PATTERN_MODE != 0) { nextPattern(); return; }
-  //SKIPPING: I can't dial the brightness down enough.
+  if (PATTERN_MODE != 0) { nextPattern(); return; } //SKIPPING in random: I can't dial the brightness down enough.
   
   //Pretty. Was originally the XY demo pattern
   uint32_t ms = millis();
@@ -561,8 +557,6 @@ void xyDemo()
   {
     LEDS.setBrightness(MASTER_BRIGHTNESS);
   }
-  LEDS.show();
-  LEDS.delay(1000/FRAMES_PER_SECOND); 
 }
 
 // 8
@@ -578,7 +572,6 @@ void crossoverChase()
     leds[i] = CRGB::Black;
     //LEDS.delay(1000/FRAMES_PER_SECOND);
   }
-  LEDS.show(); // Turn off the last LED
 }
 
 // 9
@@ -593,12 +586,11 @@ void pattern3()
   int yy;
   int zz;
   int zz2;
-  LEDS.setBrightness(MASTER_BRIGHTNESS);
   // A coloured led runs top to bottom, crosses over and back up the other side.
   // A different coloured led runs at 45 degrees, 180 degrees out of phase
   
   // This outer loop will go over each column
-  x = ch9lastX + 1;
+  x = patternLastX + 1;
   if (x >= kMatrixWidth) { x = 0;}
   
   x2 = x+1;
@@ -673,9 +665,7 @@ void pattern3()
     leds[ XY( zz2, yy)] = CRGB::Black;
     //LEDS.delay(1000/FRAMES_PER_SECOND);
   }
-  LEDS.show(); // Turn off the last LED
-  LEDS.setBrightness(MASTER_BRIGHTNESS);
-  ch9lastX = x; // ... and pass back to the main loop.
+  patternLastX = x; // ... and pass back to the main loop.
 }
 
 // 10
@@ -817,8 +807,6 @@ void pattern6()
     }
   }
   leds[ XY( 0, 5) ] = CRGB::Yellow; // CHSV( random8(), 255, 255);
-  LEDS.show();
-  LEDS.delay(1000/FRAMES_PER_SECOND);
 }
 
 
@@ -877,10 +865,6 @@ void noise_noise1()
 
   //make it looking nice
   adjust_gamma();
-
-  //and show it!
-  LEDS.show();
-  LEDS.delay(1000/FRAMES_PER_SECOND); 
 }
 
 
@@ -904,8 +888,6 @@ void plasma()
 
   offset++; // wraps at 255 for sin8
   plasVector += 16; // using an int for slower orbit (wraps at 65536)
-  LEDS.show(); // send the contents of the led memory to the LEDs
-  LEDS.delay(1000/FRAMES_PER_SECOND); 
 }
 
 
@@ -925,7 +907,6 @@ void applause()
 void huecycle()
 {
   fill_solid(leds, NUM_LEDS, CHSV(gHue, 255, 255));
-  LEDS.delay(1000/FRAMES_PER_SECOND); 
 }
 
 
@@ -973,8 +954,6 @@ void pride()
 
     nblend(leds[pixelnumber], newcolor, 64);
   }
-  LEDS.delay(1000/FRAMES_PER_SECOND); 
-  return ;
 }
 
 
@@ -1048,7 +1027,6 @@ void rainbow()
 {
   // FastLED's built-in rainbow generator
   fill_rainbow( leds, NUM_LEDS, gHue, 7);
-  LEDS.delay(1000/FRAMES_PER_SECOND);  
 }
 
 
@@ -1089,4 +1067,3 @@ void spare31()
 {
   if (PATTERN_MODE != 0) { nextPattern(); return; }
 }
-
