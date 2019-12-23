@@ -1,6 +1,3 @@
-
-
-
 // Pac-Man - SOLID
 const long PacManSolid[] PROGMEM =
 {
@@ -84,13 +81,51 @@ void PacMan()
         }
       }
     }
-    LEDS.show();
-    LEDS.delay(400/FRAMES_PER_SECOND);
-    //corkScrew_x++;
-    //if (corkScrew_x >= kMatrixWidth) {corkScrew_x = 0;}
     corkScrew_x--;
     if (corkScrew_x < 0)
     {
       corkScrew_x = kMatrixWidth -1;
+    }
+}
+
+
+void PacManR2L()
+{
+    int x = 0;
+    int y = (kMatrixHeight / 2) - 8; //This is our starting position. Our 16x16 char starts 8 chars above the middle
+    int z = 0;
+    bool mouthOpen = false;
+    x = corkScrew_x;
+    if (x >= kMatrixWidth) {x = 0;}
+
+    if (x % 4 >= 2)
+    {
+      mouthOpen = true;
+    }
+    else
+    {
+      mouthOpen= false;
+    }
+   
+    for(int ay = 0; ay < 16; ay++)
+    {
+      for(int ax = 0; ax < 16; ax++)
+      {
+        z = (x-ax);
+        if (z < 0 ) {z += kMatrixWidth ;} // Wrap around the "join" of the ball
+        if (mouthOpen)
+        {
+          leds[ XY (z, (y+ay)) ] = pgm_read_dword(&(PacManMouthOpen[((ay*16)+ax)]));  // Read array from Flash
+        }
+        else
+        {
+          leds[ XY (z, (y+ay)) ] = pgm_read_dword(&(PacManSolid[((ay*16)+ax)]));  // Read array from Flash
+        }
+      }
+    }
+    corkScrew_x++;
+    if (corkScrew_x >= kMatrixWidth)
+    {
+      corkScrew_x = 0;
     }
 }
