@@ -47,7 +47,7 @@ uint8_t gStoredPatternNumber =  0;  // Previous value, before the DMX switch was
 // 9  = AroundTheWorld. A single LED in two adjacent columns sweeps down from the top and back up the other side, then +1 x and continues
 // 10 = RainbowLighthouse. multi-coloured columns (all lit) chases around the ball
 // 11 = horizontal bounce. multi-coloured row (all lit) pulses from top to bottom down the ball 
-// 12 = spare
+// 12 = RUBY
 // 13 = Stefan's noise pattern
 // 14 = plasma - awesome, but a little like 7?
 // 15 = 'applause' - sparse, purply sparkles
@@ -64,7 +64,7 @@ uint8_t gStoredPatternNumber =  0;  // Previous value, before the DMX switch was
 // 26 = Pac-Man
 // 27 = all on, slow pulsing rainbow
 // 28 = same, but with sparkles
-// 29 = spare
+// 29 = Pac-Man - going the other way
 // 30 = spare
 // 31 = spare
 
@@ -237,6 +237,7 @@ void DrawOneFrame( byte startHue8, int8_t yHueDelta8, int8_t xHueDelta8)
 #include "Snake.cpp"
 #include "Pac-Man.h"
 #include "Corkscrews.h"
+#include "Ruby.h"
 
 //Instantiate a snake:
 Snake snake(leds, kMatrixWidth, kMatrixHeight);
@@ -336,9 +337,9 @@ uint16_t gCurrentPatternDelay;
 typedef void (*SimplePatternList[])();
 SimplePatternList gPatterns = { black, spare1, confetti, sinelon, 
     juggle, bpm, lighthouse, xyDemo, crossoverChase, AroundTheWorld, RainbowLighthouse, horizontalBounce, 
-    spare12, noise_noise1, plasma, applause, huecycle, pride, fire2012WithPalette, 
+    ruby, noise_noise1, plasma, applause, huecycle, pride, fire2012WithPalette, 
     wave, matrixEffect, staticCorkscrew, simpleCorkscrew, trailingCorkscrew, reverseTrailingCorkscrew,
-    doSnake, PacMan, rainbow, rainbowWithGlitter, spare29, spare30, spare31};
+    doSnake, PacMan, rainbow, rainbowWithGlitter, PacManR2L, spare30, spare31};
 
 uint16_t PatternDelay[ARRAY_SIZE(gPatterns)] =
 {
@@ -354,7 +355,7 @@ uint16_t PatternDelay[ARRAY_SIZE(gPatterns)] =
 30, // 9  = AroundTheWorld. A single LED in two adjacent columns sweeps down from the top and back up the other side, then +1 x and continues
 40, // 10 = RainbowLighthouse. multi-coloured columns (all lit) chases around the ball
 40, // 11 = horizontal bounce. multi-coloured row (all lit) pulses from top to bottom down the ball 
-20, // 12 = spare
+20, // 12 = RUBY
 90, // 13 = Stefan's noise pattern
 20, // 14 = plasma - awesome, but a little like 7?
 90, // 15 = 'applause' - sparse, purply sparkles
@@ -367,11 +368,11 @@ uint16_t PatternDelay[ARRAY_SIZE(gPatterns)] =
 30, // 22 = multi-coloured rotating corkscrew
 60, // 23 = my corkscrew, with trailing bits
 60, // 24 = reverse corkscrew
-2,  // 25 = doSnake
+20, // 25 = doSnake
 30, // 26 = Pac-Man
 40, // 27 = rainbow
 40, // 28 = rainbowWithGlitter
-20, // 29 = spare
+20, // 29 = Pac-Man - going the other way
 20, // 30 = spare
 20  // 31 = spare
 };
@@ -393,7 +394,7 @@ void loop()
   // send the 'leds' array out to the actual LED strip
   LEDS.show();  
   // insert a delay to keep the framerate modest
-  LEDS.delay((10000/MASTER_SPEED)/FRAMES_PER_SECOND); 
+  LEDS.delay((8000/MASTER_SPEED)/FRAMES_PER_SECOND); 
 
   // do some periodic updates, including checking for new DMX values:
   EVERY_N_MILLISECONDS( 20 )
@@ -778,7 +779,7 @@ void horizontalBounce()
       leds[ XY( x, yy) ] = thisColour;
     }
     LEDS.show();
-    LEDS.delay((10000/MASTER_SPEED)/FRAMES_PER_SECOND);
+    LEDS.delay((8000/MASTER_SPEED)/FRAMES_PER_SECOND);
     // This inner loop will EXTINGUISH the row
     for(int x = 0; x < kMatrixWidth; x++)
     {
@@ -799,7 +800,7 @@ void horizontalBounce()
       leds[ XY( x, yy) ] = thisColour;
     }
     LEDS.show();
-    LEDS.delay((10000/MASTER_SPEED)/FRAMES_PER_SECOND);
+    LEDS.delay((8000/MASTER_SPEED)/FRAMES_PER_SECOND);
     // This inner loop will EXTINGUISH the row - but LEAVES the last (top) two rows lit
     if (y >= 2)
     {
@@ -815,10 +816,12 @@ void horizontalBounce()
 
 
 // 12
-void spare12()
-{
-  if (PATTERN_MODE != 0) { nextPattern(); return; }
-}
+// Ruby.h - red text scrolling around the ball
+
+//void spare12()
+//{
+// if (PATTERN_MODE != 0) { nextPattern(); return; }
+//}
 
 
 //as shown on youtube
@@ -1060,10 +1063,11 @@ void addGlitter( fract8 chanceOfGlitter)
 
 
 //29
-void spare29()
-{
-  if (PATTERN_MODE != 0) { nextPattern(); return; }
-}
+// PacManR2L
+//void PacManR2L()
+//{
+//  if (PATTERN_MODE != 0) { nextPattern(); return; }
+//}
 
 
 //30
