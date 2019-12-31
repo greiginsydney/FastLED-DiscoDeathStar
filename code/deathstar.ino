@@ -882,7 +882,7 @@ void noise_noise1()
 }
 
 
-// 14 - https://forum.arduino.cc/index.php?topic=600200.0
+// 14 - https://github.com/macetech/RGBShadesHoliday/blob/master/effects.h
 void plasma() 
 {
   static byte offset  = 0; // counter for radial color wave motion
