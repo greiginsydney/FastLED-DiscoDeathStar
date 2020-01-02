@@ -1,4 +1,4 @@
-# FastLED-DeathStar
+# FastLED - the Disco Death Star
 My first FastLED project
 
 This is a works in progress. Here it is on its side just after the LED strips have all been added:
@@ -9,7 +9,7 @@ There are 2880 LEDs there - 96 metres of WS2812 LED strip.
 
 8 IO pins from a Teensy 3.6 are feeding a total of 64 "columns" (horizontal in the image), each 1.5m or 45 LEDs deep. Each IO pin is driving 8 columns in a serpentine config, thus 360 LEDs.
 
-The code contains example chases from a range of sources and at this stage I may have not yet fully attributed all authors.
+The code contains example chases from a range of sources and hopefully I have fully attributed all authors.
 
 It started as a hybrid of
 - https://github.com/FastLED/FastLED/wiki/Parallel-Output
@@ -24,4 +24,9 @@ It started as a hybrid of
 
 <br>
 
+The whole saga is described in painful detail on the blog:
+- [DHMG2019 – the Disco Death Star – Pt.1](https://greiginsydney.com/dhmg2019-dds-pt1/)
+- [DHMG2019 – the Disco Death Star – Pt.2](https://greiginsydney.com/dhmg2019-dds-pt2/)
+
+<br>
 \- Greig.
